@@ -1,5 +1,5 @@
 {
-  "tgs_secret_key": "1b04a9485e8dbb39f585627eed520ed87de6feedccae5520edb4f53ae14bf954",
+  "tgs_secret_key": "81b01419a6f57c8d33cc2a6a22bd26fd6d77c8cfa86d29014bd4ac561c4f22ce",
   "clients": {
     "alice": {
       "password_hash": "9be51224848ec41f5049fe0a1dbb53a966efa2bd5c6b8296a0fce25ee8d8805f",
@@ -17,11 +17,11 @@
   "services": {
     "file_server": {
       "service_id": "file_server",
-      "service_key": "b47b22ff07cad09925b0ccf8cfbae8ac56382d9dfe0a08fc7306aa2864dba684"
+      "service_key": "f9c0b6df543b42e5ae0239fa0c188932121d29e7177607061df6edf4f0101260"
     },
     "print_server": {
       "service_id": "print_server",
-      "service_key": "eec49d08f14e515b15edda53b31d45f157b3f45592d031515e8530de919cd5d3"
+      "service_key": "9effe7a9989490037810e3e56d2e50efe7d8558537e63e1949250ea0c96ba06e"
     }
   }
 }

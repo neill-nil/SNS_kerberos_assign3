@@ -1,0 +1,27 @@
+{
+  "tgs_secret_key": "1b04a9485e8dbb39f585627eed520ed87de6feedccae5520edb4f53ae14bf954",
+  "clients": {
+    "alice": {
+      "password_hash": "9be51224848ec41f5049fe0a1dbb53a966efa2bd5c6b8296a0fce25ee8d8805f",
+      "client_id": "alice"
+    },
+    "bob": {
+      "password_hash": "edcef53dda780fb2e0026776ab334023727568fb318b608c8b54f61245e8ad5a",
+      "client_id": "bob"
+    },
+    "charlie": {
+      "password_hash": "c762de39f023c339350f33b26d2ba9083792960da90b68bee19cc97fd5d17ec4",
+      "client_id": "charlie"
+    }
+  },
+  "services": {
+    "file_server": {
+      "service_id": "file_server",
+      "service_key": "b47b22ff07cad09925b0ccf8cfbae8ac56382d9dfe0a08fc7306aa2864dba684"
+    },
+    "print_server": {
+      "service_id": "print_server",
+      "service_key": "eec49d08f14e515b15edda53b31d45f157b3f45592d031515e8530de919cd5d3"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-SECURITY.mdimport sys
+import sys
 import json
 import socket
 import socketserver
@@ -37,7 +37,7 @@ class ASNodeHandler(socketserver.BaseRequestHandler):
         ticket_plaintext = f"{client_id},{tgs_id},{client_timestamp},{lifetime},{session_key_c_tgs},{key_version}"
         
         # Sign the plain ticket
-        private_key = server.config["as_nodes"][server.as_id]["private_key"]
+        private_key = server.config["node_data"]["private_key"]
         R, s = schnorr_sign(ticket_plaintext.encode('utf-8'), private_key, server.as_id)
         
         # Encrypt the ticket with TGS key
@@ -57,10 +57,10 @@ class ASNodeHandler(socketserver.BaseRequestHandler):
         self.request.sendall(json.dumps(resp).encode('utf-8'))
 
 def start_server(as_id):
-    with open("config.json", "r") as f:
+    with open(f"{as_id}_config.json", "r") as f:
         config = json.load(f)
     
-    port = config["as_nodes"][as_id]["port"]
+    port = config["node_data"]["port"]
     
     server = socketserver.ThreadingTCPServer(("127.0.0.1", port), ASNodeHandler)
     server.config = config

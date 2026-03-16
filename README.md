@@ -21,9 +21,9 @@ The system consists of independent processes that do not communicate with each o
    python master_keygen.py
    
    # Or generate keys for N multiple clients
-   python master_keygen.py 5
+   python master_keygen.py 3
    ```
-   *This outputs `config.json` containing the RFC 5114 keys, ports, and seeds.*
+   *This outputs isolated `<NodeID>_config.json` files containing only the private keys and seeds specific to that node (e.g., `AS_1_config.json`). It also generates `public_info.json` mapping public keys and ports globally, and `client_keys.json`.*
 
 2. **Start the Authorities & Services**
    Open separate terminals for each node:

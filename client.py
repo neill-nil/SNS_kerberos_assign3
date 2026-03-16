@@ -15,17 +15,19 @@ def send_request(port, req_dict):
     except Exception as e:
         return {"error": str(e)}
 
-def run_client(client_id="Client_1", config_file="config.json"):
-    with open(config_file, "r") as f:
-        config = json.load(f)
+def run_client(client_id="Client_1"):
+    with open("client_keys.json", "r") as f:
+        client_keys = json.load(f)
+    with open("public_info.json", "r") as f:
+        public_info = json.load(f)
         
-    if client_id not in config["clients"]:
-        print(f"[Error] No cryptographic material found for {client_id} in {config_file}")
+    if client_id not in client_keys:
+        print(f"[Error] No cryptographic material found for {client_id} in client_keys.json")
         return
         
     tgs_id = "TGS_1"
     service_id = "Service_1"
-    k_c = bytes.fromhex(config["clients"][client_id]["k_c"])
+    k_c = bytes.fromhex(client_keys[client_id]["k_c"])
     
     print("\n[Phase 1] Contacting Authentication Servers (AS cluster)...")
     timestamp1 = str(int(time.time()))
@@ -36,7 +38,7 @@ def run_client(client_id="Client_1", config_file="config.json"):
     }
     
     as_responses = []
-    for as_node, as_info in config["as_nodes"].items():
+    for as_node, as_info in public_info["as_nodes"].items():
         resp = send_request(as_info["port"], req_as)
         if resp and "error" not in resp:
             as_responses.append(resp)
@@ -56,7 +58,7 @@ def run_client(client_id="Client_1", config_file="config.json"):
     
     try:
         session_payload_bytes = aes_cbc_decrypt(k_c, enc_session_key)
-        session_payload = session_payload_bytes.decode('utf-8')
+        session_payload = session_payload_bytes.decode('utf-8').rstrip('\0')
         session_key_c_tgs, tgs_id_resp, ts_resp = session_payload.split(',')
         if tgs_id_resp != tgs_id or ts_resp != timestamp1:
             raise Exception("Session payload mismatch")
@@ -77,9 +79,11 @@ def run_client(client_id="Client_1", config_file="config.json"):
     timestamp2 = str(int(time.time()))
     authenticator_payload = f"{client_id},{timestamp2}"
     
-    session_key_c_tgs_bytes = session_key_c_tgs.encode('utf-8')[:32]
+    session_key_c_tgs_bytes = bytes.fromhex(session_key_c_tgs)
     if len(session_key_c_tgs_bytes) < 32:
-        session_key_c_tgs_bytes = session_key_c_tgs_bytes.ljust(32, b'0')
+        session_key_c_tgs_bytes = session_key_c_tgs_bytes.rjust(32, b'\0')
+    elif len(session_key_c_tgs_bytes) > 32:
+        session_key_c_tgs_bytes = session_key_c_tgs_bytes[:32]
         
     enc_authenticator = aes_cbc_encrypt(session_key_c_tgs_bytes, authenticator_payload.encode('utf-8'))
     
@@ -91,7 +95,7 @@ def run_client(client_id="Client_1", config_file="config.json"):
     }
     
     tgs_responses = []
-    for tgs_node, tgs_info in config["tgs_nodes"].items():
+    for tgs_node, tgs_info in public_info["tgs_nodes"].items():
         resp = send_request(tgs_info["port"], req_tgs)
         if resp and "error" not in resp:
             tgs_responses.append(resp)
@@ -110,7 +114,7 @@ def run_client(client_id="Client_1", config_file="config.json"):
     
     try:
         service_payload_bytes = aes_cbc_decrypt(session_key_c_tgs_bytes, enc_service_session_key)
-        service_payload = service_payload_bytes.decode('utf-8')
+        service_payload = service_payload_bytes.decode('utf-8').rstrip('\0')
         service_session_key, srv_id_resp, ts_resp2 = service_payload.split(',')
         if srv_id_resp != service_id or ts_resp2 != timestamp2:
             raise Exception("Service Session payload mismatch")
@@ -131,9 +135,11 @@ def run_client(client_id="Client_1", config_file="config.json"):
     timestamp3 = str(int(time.time()))
     auth3_payload = f"{client_id},{timestamp3}"
     
-    service_session_key_bytes = service_session_key.encode('utf-8')[:32]
+    service_session_key_bytes = bytes.fromhex(service_session_key)
     if len(service_session_key_bytes) < 32:
-        service_session_key_bytes = service_session_key_bytes.ljust(32, b'0')
+        service_session_key_bytes = service_session_key_bytes.rjust(32, b'\0')
+    elif len(service_session_key_bytes) > 32:
+        service_session_key_bytes = service_session_key_bytes[:32]
         
     enc_authenticator3 = aes_cbc_encrypt(service_session_key_bytes, auth3_payload.encode('utf-8'))
     
@@ -143,7 +149,7 @@ def run_client(client_id="Client_1", config_file="config.json"):
         "timestamp": timestamp3
     }
     
-    srv_port = config["services"][service_id]["port"]
+    srv_port = public_info["services"][service_id]["port"]
     resp = send_request(srv_port, req_service)
     
     if resp and resp.get("status") == "success":

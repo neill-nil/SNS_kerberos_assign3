@@ -50,10 +50,10 @@ class TGSNodeHandler(socketserver.BaseRequestHandler):
             if not auth_id or auth_id in used_auths:
                 continue 
             
-            if auth_id not in config["as_nodes"]:
+            if auth_id not in config["public_info"]["as_nodes"]:
                 continue
                 
-            pub_key = config["as_nodes"][auth_id]["public_key"]
+            pub_key = config["public_info"]["as_nodes"][auth_id]["public_key"]
             R = sig_data["R"]
             s = sig_data["s"]
             
@@ -66,9 +66,11 @@ class TGSNodeHandler(socketserver.BaseRequestHandler):
             return
             
         # 3. Decrypt Authenticator
-        session_key_bytes = session_key_c_tgs.encode('utf-8')[:32]
+        session_key_bytes = bytes.fromhex(session_key_c_tgs)
         if len(session_key_bytes) < 32:
-            session_key_bytes = session_key_bytes.ljust(32, b'0')
+            session_key_bytes = session_key_bytes.rjust(32, b'\0')
+        elif len(session_key_bytes) > 32:
+            session_key_bytes = session_key_bytes[:32]
             
         try:
             auth_plaintext_bytes = aes_cbc_decrypt(session_key_bytes, encrypted_authenticator)
@@ -98,7 +100,7 @@ class TGSNodeHandler(socketserver.BaseRequestHandler):
         
         service_ticket_plaintext = f"{client_id},{service_id},{client_timestamp2},{lifetime},{service_session_key},{key_version}"
         
-        private_key = config["tgs_nodes"][server.tgs_id]["private_key"]
+        private_key = config["node_data"]["private_key"]
         R, s = schnorr_sign(service_ticket_plaintext.encode('utf-8'), private_key, server.tgs_id)
         
         encrypted_service_ticket = aes_cbc_encrypt(k_v, service_ticket_plaintext.encode('utf-8'))
@@ -116,10 +118,10 @@ class TGSNodeHandler(socketserver.BaseRequestHandler):
         self.request.sendall(json.dumps(resp).encode('utf-8'))
 
 def start_server(tgs_id):
-    with open("config.json", "r") as f:
+    with open(f"{tgs_id}_config.json", "r") as f:
         config = json.load(f)
     
-    port = config["tgs_nodes"][tgs_id]["port"]
+    port = config["node_data"]["port"]
     
     server = socketserver.ThreadingTCPServer(("127.0.0.1", port), TGSNodeHandler)
     server.config = config

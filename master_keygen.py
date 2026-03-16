@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from crypto_utils import generate_schnorr_keypair
 
 def main():
@@ -47,11 +48,49 @@ def main():
     config["shared_keys"]["as_seed"] = os.urandom(32).hex() # Master AS seed for deterministic session keys
     config["shared_keys"]["tgs_seed"] = os.urandom(32).hex() # Master TGS seed for deterministic session keys
     
-    with open("config.json", "w") as f:
-        json.dump(config, f, indent=4)
+    # Dump Public Information
+    public_config = {
+        "as_nodes": {k: {"public_key": v["public_key"], "port": v["port"]} for k,v in config["as_nodes"].items()},
+        "tgs_nodes": {k: {"public_key": v["public_key"], "port": v["port"]} for k,v in config["tgs_nodes"].items()},
+        "services": {k: {"port": v["port"]} for k,v in config["services"].items()}
+    }
+    with open("public_info.json", "w") as f:
+        json.dump(public_config, f, indent=4)
         
-    print("Successfully generated all cryptographic material securely in config.json")
+    # Dump Node-Specific Configs
+    for as_id, as_data in config["as_nodes"].items():
+        node_cfg = {
+            "node_data": as_data,
+            "clients": config["clients"],
+            "shared_keys": {"k_tgs": config["shared_keys"]["k_tgs"], "as_seed": config["shared_keys"]["as_seed"]},
+            "public_info": public_config
+        }
+        with open(f"{as_id}_config.json", "w") as f:
+            json.dump(node_cfg, f, indent=4)
+            
+    for tgs_id, tgs_data in config["tgs_nodes"].items():
+        node_cfg = {
+            "node_data": tgs_data,
+            "shared_keys": {"k_tgs": config["shared_keys"]["k_tgs"], "tgs_seed": config["shared_keys"]["tgs_seed"]},
+            "services": config["services"],
+            "public_info": public_config
+        }
+        with open(f"{tgs_id}_config.json", "w") as f:
+            json.dump(node_cfg, f, indent=4)
+            
+    for srv_id, srv_data in config["services"].items():
+        node_cfg = {
+            "node_data": srv_data,
+            "public_info": public_config
+        }
+        with open(f"{srv_id}_config.json", "w") as f:
+            json.dump(node_cfg, f, indent=4)
+            
+    # Dump Client Keys
+    with open("client_keys.json", "w") as f:
+        json.dump(config["clients"], f, indent=4)
+        
+    print("Successfully generated all isolated cryptographic material into individual config files.")
 
 if __name__ == "__main__":
-    import sys
     main()

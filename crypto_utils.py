@@ -58,6 +58,12 @@ def schnorr_sign(message: bytes, private_key: int, auth_id: str):
     return R, s
 
 def schnorr_verify(message: bytes, R: int, s: int, public_key: int, auth_id: str):
+    try:
+        R = int(R)
+        s = int(s)
+    except (ValueError, TypeError):
+        return False
+        
     if R <= 0 or R >= P or s <= 0 or s >= Q:
         return False
         
@@ -72,21 +78,18 @@ def schnorr_verify(message: bytes, R: int, s: int, public_key: int, auth_id: str
     right = (R * mod_exp(public_key, e, P)) % P
     return left == right
 
-def pkcs7_pad(data: bytes, block_size=16):
-    padding_len = block_size - (len(data) % block_size)
-    return data + bytes([padding_len] * padding_len)
-
-def pkcs7_unpad(data: bytes):
-    padding_len = data[-1]
-    return data[:-padding_len]
+from cryptography.hazmat.primitives import padding
 
 def aes_cbc_encrypt(key: bytes, plaintext: bytes) -> bytes:
     # Key must be 32 bytes for AES-256
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
-    padded = pkcs7_pad(plaintext)
-    ciphertext = encryptor.update(padded) + encryptor.finalize()
+    
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(plaintext) + padder.finalize()
+    
+    ciphertext = encryptor.update(padded_data) + encryptor.finalize()
     return iv + ciphertext
 
 def aes_cbc_decrypt(key: bytes, ciphertext: bytes) -> bytes:
@@ -94,5 +97,8 @@ def aes_cbc_decrypt(key: bytes, ciphertext: bytes) -> bytes:
     actual_ciphertext = ciphertext[16:]
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
-    padded = decryptor.update(actual_ciphertext) + decryptor.finalize()
-    return pkcs7_unpad(padded)
+    
+    padded_data = decryptor.update(actual_ciphertext) + decryptor.finalize()
+    
+    unpadder = padding.PKCS7(128).unpadder()
+    return unpadder.update(padded_data) + unpadder.finalize()

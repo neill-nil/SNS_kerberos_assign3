@@ -7,6 +7,8 @@ If an attacker compromises `AS_1` (a partial compromise), they only possess the 
 ## 2. Why two compromised authorities break security
 The protocol specifically utilizes a **2-of-3 threshold trust model**. If an attacker compromises both `AS_1` and `AS_2`, they gain access to private keys `x_1` and `x_2`. They can now construct arbitrary valid-looking tickets and successfully sign them with two independent, valid cryptographic signatures. The TGS node verifier, seeing exactly what it was designed to accept (two independent signatures), will accept the forged ticket representing total compromise.
 
+*(Note: Authorities strictly maintain independent storage of their secret `x` private keys, e.g., via `AS_1_config.json`, structurally enforcing that compromising one node does not expose the filesystem secrets of the others).*
+
 ## 3. Why requiring two independent Schnorr signatures prevents a single compromised authority from forging tickets
 A single compromised authority, possessing only `x_1`, can sign any piece of data and generate `(R_1, s_1)`. However, a verification node strictly checks the identity markers (`auth_id`) appended to the signatures and verifies them against the globally known public keys `(y_1, y_2, y_3)`. 
 The mathematical difficulty of the Discrete Logarithm Problem guarantees that without `x_2`, the compromised authority cannot output a pair `(R_2, s_2)` such that `g^{s_2} ≡ R_2 * y_2^e (mod p)`. The verifier forces a count of valid verifications > 1, thus completely blocking the single forgery.
@@ -21,7 +23,7 @@ By subtracting the two equations:
 `s_1 - s_2 = x(e_1 - e_2) (mod q)`
 `x = (s_1 - s_2)(e_1 - e_2)^-1 (mod q)`
 
-This completely exposes the private long-term key `x`, catastrophically destroying the system's security. Our `crypto_utils.py` relies on `os.urandom` to ensure `k` is mathematically fresh for every single signature event.
+This completely exposes the private long-term key `x`, catastrophically destroying the system's security. Our `crypto_utils.py` relies on strictly-bounded RNG (`os.urandom`) to ensure `k` is mathematically fresh for every single signature event. Furthermore, all inputs to the mathematical verification process strictly cast to and bound-check as integers, ensuring attackers cannot supply malicious payload types (like arrays or injection strings) to force logic bypasses.
 
 ## 5. Key share leakage impact
 If a single private signing key leaks (e.g., `x_1`), the exact impact is mathematically bounded to a "Partial Compromise" condition. The leaked key grants the attacker the ability to form exactly one signature per ticket. Due to the 2-of-3 design, the system remains resilient, and the attacker is mathematically isolated. The Service node still correctly waits for `x_2` or `x_3` to independently validate the transaction before granting access.
